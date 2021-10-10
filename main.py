@@ -23,13 +23,14 @@ def _choose_text():
 
 
 def compare_strings(str1, str2, start, stop):
-    mistakes = []
-    if str1 == str2:
-        return 1
-    for i in range(start, stop):
-        if str1[i] != str2[i]:
-            mistakes.append(i)
-    return ((mistakes, 1)[len(mistakes) == 0])
+    # mistakes = []
+    # if str1 == str2:
+    #     return 1
+    # for i in range(start, stop):
+    #     if str1[i] != str2[i]:
+    #         mistakes.append(i)
+    # return ((mistakes, 1)[len(mistakes) == 0])
+    pass
 
 
 class Timer:
@@ -54,13 +55,7 @@ class SpeedTypingInternals:
         self.mistakes_indexes = []
 
     def speed_typing_check(self, typed_text, start, stop):
-        if self.text == typed_text:
-            return 1
-        try:
-            self.mistakes_indexes = compare_strings(self.text, typed_text, start, stop)
-            return 0
-        except IndexError:
-            raise IndexError("start or stop index out of range")
+        pass
 
 
 class SpeedTypingInterface:
@@ -72,12 +67,28 @@ class SpeedTypingInterface:
     def timer(self):
         pass
 
+    def text_example(self, window, text_to_show):
+        text_sample = tk.Text(window, width=50)
+        text_sample.insert('0.0', text_to_show)
+        text_sample.grid(column=0, row=0, columnspan=5, padx=50, pady=50)
+        text_sample.config(state=tk.DISABLED, font=("Arial", 14))
+        text_sample.tag_add("test", '1.0', '1.1')
+        text_sample.tag_config("test", foreground='red')
+
+    def input_field(self, window):
+        text_input = tk.Text(window, width=50)
+        text_input.config(font=("Arial", 14))
+        text_input.grid(column=5, row=0, columnspan=5, padx=(0, 50), pady=50)
+        text_input.focus()
+
     def display(self, text_to_show):
         window = tk.Tk()
-        window.geometry("1200x600")
-        text_sample = tk.Label(window, text=text_to_show, wraplength=1100, justify=tk.LEFT)
-        text_sample.grid(column=0, row=0, columnspan=5, padx=50, pady=50)
-        window.update()
+        window.resizable(False, False)
+
+        self.text_example(window, text_to_show)
+
+        self.input_field(window)
+
         window.mainloop()
 
 
@@ -114,8 +125,6 @@ class SpeedTypingTest:
 
 
 if __name__ == '__main__':
-    # test = SpeedTypingTest()
-    # test.interface()
-
     sp = SpeedTypingInterface()
     sp.display(open("texts/" + "test" + ".txt", 'r').read())
+    #print([open("texts/" + 'test' + ".txt", 'r').read()])
