@@ -1,0 +1,2 @@
+# SpeedTypingTest
+Simple pet project
