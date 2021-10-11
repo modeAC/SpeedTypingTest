@@ -105,7 +105,7 @@ class SpeedTypingInternals:
 
 
 class SpeedTypingInterface():
-    def __init__(self, test_duration=10.0, text=""):
+    def __init__(self, test_duration=60, text=""):
         self.text_to_show = text
         self.duration = test_duration
         self.time = Timer(self.duration)
@@ -135,7 +135,7 @@ class SpeedTypingInterface():
                 if self.time.update() == self.duration or self.finish_flag == True:
                     self.__finish()
                     return
-                window.after(50, func)
+                window.after(1, func)
         func()
 
     def text_example(self, window, text_to_show):
@@ -165,8 +165,8 @@ class SpeedTypingInterface():
 
         func()
 
-    def popup_window(self, text_var, mistakes_number, window):
-        message = "Keyspeed is " + str(len(text_var.get_value())) + "KPM\nNumber of mistakes is " + str(mistakes_number)
+    def popup_window(self, text_var, speed, mistakes_number, window):
+        message = "Keyspeed is " + str(speed) + " KPM\nNumber of mistakes is " + str(mistakes_number)
         popup = tk.Toplevel()
         popup.resizable(False, False)
         label = tk.Label(popup, text=message).pack(padx=50, pady=50)
@@ -196,6 +196,7 @@ class SpeedTypingInterface():
 
         while True:
             if count_mistakes(self.text_to_show, text_var.get_value()) is True:
+                time = self.time.update()
                 self.__finish()
             try:
                 window.update()
@@ -206,10 +207,14 @@ class SpeedTypingInterface():
                 if self.finish_flag is True:
                     if self.popup_crated is False:
                         mistakes_number = count_mistakes(self.text_to_show, text_var.get_value())
+                        speed = len(text_var.get_value())
                         if mistakes_number is True:
                             mistakes_number = 0
-
-                        self.popup_window(text_var, mistakes_number, window)
+                            try:
+                                speed = int(len(text_var.get_value())*60//time)
+                            except ZeroDivisionError:
+                                speed = "OVER 9000"
+                        self.popup_window(text_var, speed, mistakes_number, window)
                         self.popup_crated = True
 
 
