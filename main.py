@@ -1,4 +1,7 @@
-
+# This is a sample Python script.
+import tkinter
+# Press Shift+F10 to execute it or replace it with your code.
+# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import tkinter as tk
 import time
 import enum
@@ -40,6 +43,12 @@ class stringPlus:
 class pseudoPointer:
     def __init__(self, var=None):
         self.value = [var]
+
+    def __len__(self):
+        try:
+            return len(self.value[0])-self.value[0].count('\n')
+        except TypeError:
+            return 1
 
     def set_value(self, value):
         self.value = [value]
@@ -174,7 +183,7 @@ class SpeedTypingInterface():
         text_sample.config(state=tk.DISABLED, font=("Arial", 14))
 
         def func():
-            end_index = self.text_to_show.reformat_index(len(text_var.get_value()))
+            end_index = self.text_to_show.reformat_index(len(text_var))
             for tag in text_sample.tag_names():
                 text_sample.tag_delete(tag)
             self.highlight_entered_text(text_sample, end_index, text_var)
