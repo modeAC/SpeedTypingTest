@@ -26,6 +26,19 @@ class stringPlus:
     def __str__(self):
         return self.string
 
+    def reformat_index(self, index):
+        if index > self.info[0][1]:
+            formated_index = index - self.info[0][1]
+        else:
+            return [self.info[0][0], index]
+
+        for i in range(1, len(self.info)):
+            if formated_index > self.info[i][1]:
+                formated_index = index - self.info[i][1]
+            else:
+                return (self.info[i][0], formated_index)
+        pass
+
 
 class pseudoPointer:
     def __init__(self, var=None):
@@ -48,14 +61,19 @@ class AvailableTexts(enum.Enum):
 def _choose_text():
     return random.choice(list(AvailableTexts)).value
 
-def compare_strings(str1, str2, start, stop):
+def compare_strings(str1, str2):
     mistakes = []
     if str1 == str2:
-        return True
-    for i in range(start, stop):
+        return mistakes
+    if len(str2) > len(str1):
+        lenght = len(str1)
+    else:
+        lenght = len(str2)
+
+    for i in range(lenght):
         if str1[i] != str2[i]:
             mistakes.append(i)
-    return ((mistakes, 1)[len(mistakes) == 0])
+    return mistakes
 
 def count_mistakes(str1, str2):
     mistakes = 0
@@ -63,13 +81,13 @@ def count_mistakes(str1, str2):
         return True
     if len(str2) > len(str1):
         lenght = len(str1)
-        mistakes+=(len(str2)-len(str1))
+        mistakes += (len(str2) - len(str1))
     else:
         lenght = len(str2)
 
     for i in range(lenght):
         if str1[i] != str2[i]:
-            mistakes+=1
+            mistakes += 1
     return mistakes
 
 
@@ -98,14 +116,14 @@ class SpeedTypingInternals:
         if self.text.string == typed_text:
             return 1
         try:
-            self.mistakes_indexes = compare_strings(self.text.string, typed_text, start, stop)
+            self.mistakes_indexes = compare_strings(self.text.string, typed_text)
             return 0
         except IndexError:
             raise IndexError("start or stop index out of range")
 
 
 class SpeedTypingInterface():
-    def __init__(self, test_duration=60, text=""):
+    def __init__(self, test_duration=60, text=stringPlus("")):
         self.text_to_show = text
         self.duration = test_duration
         self.time = Timer(self.duration)
@@ -115,9 +133,22 @@ class SpeedTypingInterface():
         self.popup_crated = False
 
     @staticmethod
-    def highlight_text(txtwidget, tag_name, lineno, start_char, end_char, bg_color=None, fg_color=None):
-        txtwidget.tag_add(tag_name, f'{lineno}.{start_char}', f'{lineno}.{end_char}')
+    def highlight_text(txtwidget, tag_name, start_line, end_line, start_char, end_char, bg_color=None, fg_color=None):
+        txtwidget.tag_add(tag_name, f'{start_line}.{start_char}', f'{end_line}.{end_char}')
         txtwidget.tag_config(tag_name, background=bg_color, foreground=fg_color)
+
+    def highlight_entered_text(self, text_field, end_index, text_var):
+        self.highlight_text(text_field, "correct_input", 0, end_index[0], 0, end_index[1], fg_color='green')
+        self.highlight_mistakes(text_field, text_var)
+
+    def highlight_mistakes(self, text_field, text_var):
+        mistakes = compare_strings(self.text_to_show.string, text_var.get_value())
+        if mistakes == []:
+            return
+        else:
+            for mist in mistakes:
+                index = self.text_to_show.reformat_index(mist)
+                self.highlight_text(text_field, 'mistake', index[0], index[0], index[1], index[1]+1, bg_color='#FDCDC2' ,fg_color='red')
 
     def __finish(self):
         self.start_flag = False
@@ -135,14 +166,27 @@ class SpeedTypingInterface():
                 if self.time.update() == self.duration or self.finish_flag == True:
                     self.__finish()
                     return
-                window.after(1, func)
+                window.after(50, func)
+
         func()
 
-    def text_example(self, window, text_to_show):
+    def text_example(self, window, text_to_show, text_var):
         text_sample = tk.Text(window, width=50)
         text_sample.insert('0.0', text_to_show)
         text_sample.grid(column=0, row=0, columnspan=5, padx=50, pady=50)
         text_sample.config(state=tk.DISABLED, font=("Arial", 14))
+
+        def func():
+            end_index = self.text_to_show.reformat_index(len(text_var.get_value()))
+            for tag in text_sample.tag_names():
+                text_sample.tag_delete(tag)
+            self.highlight_entered_text(text_sample, end_index, text_var)
+            text_sample.update()
+            if self.finish_flag is True:
+                return
+            window.after(50, func)
+
+        func()
 
     def __game_started(self, text_input):
         if text_input.get('1.0', 'end-1c') == "":
@@ -160,8 +204,9 @@ class SpeedTypingInterface():
             if self.__game_started(text_input) is True:
                 self.start_flag = True
             if self.finish_flag is True:
-                text_input.delete("1.0","end")
-            window.after(10, func)
+                text_input.delete("1.0", "end")
+                return
+            window.after(50, func)
 
         func()
 
@@ -179,7 +224,7 @@ class SpeedTypingInterface():
             self.time = Timer(self.duration)
             window.destroy()
 
-        tk.Button(popup, text="close", command=func).pack()
+        tk.Button(popup, text="Close", command=func).pack()
 
         popup.mainloop()
 
@@ -188,14 +233,14 @@ class SpeedTypingInterface():
         window = tk.Tk()
         window.resizable(False, False)
 
-        self.text_example(window, self.text_to_show)
+        self.text_example(window, self.text_to_show.string, text_var)
 
         self.input_field(window, text_var)
 
         self.timer(window)
 
         while True:
-            if count_mistakes(self.text_to_show, text_var.get_value()) is True:
+            if count_mistakes(self.text_to_show.string, text_var.get_value()) is True:
                 time = self.time.update()
                 self.__finish()
             try:
@@ -206,12 +251,12 @@ class SpeedTypingInterface():
                         self.timer_started = True
                 if self.finish_flag is True:
                     if self.popup_crated is False:
-                        mistakes_number = count_mistakes(self.text_to_show, text_var.get_value())
+                        mistakes_number = count_mistakes(self.text_to_show.string, text_var.get_value())
                         speed = len(text_var.get_value())
                         if mistakes_number is True:
                             mistakes_number = 0
                             try:
-                                speed = int(len(text_var.get_value())*60//time)
+                                speed = int(len(text_var.get_value()) * 60 // time)
                             except ZeroDivisionError:
                                 speed = "OVER 9000"
                         self.popup_window(text_var, speed, mistakes_number, window)
@@ -221,20 +266,22 @@ class SpeedTypingInterface():
             except tk.TclError:
                 break
 
-        #window.mainloop()
+        # window.mainloop()
 
 
 class SpeedTypingManager:
     def __init__(self):
         self.internals = SpeedTypingInternals()
-        self.interface = SpeedTypingInterface(text=SpeedTypingInternals().text.string)
+        self.interface = SpeedTypingInterface(text=SpeedTypingInternals().text,
+                                              test_duration=self.internals.duration)
 
     def start(self):
         text_var = pseudoPointer("")
         self.interface.display(text_var)
 
 
-
 if __name__ == '__main__':
     s = SpeedTypingManager()
     s.start()
+
+
