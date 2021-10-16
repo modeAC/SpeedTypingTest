@@ -1,3 +1,3 @@
 # SpeedTypingTest
-Simple shitty python type speed tester made cause of boredom
+Simple shitty python type speed tester made of boredom
 Enjoy this ;)
