@@ -27,8 +27,6 @@ class stringPlus:
     def __str__(self):
         return self.string
 
-    def __getitem__(self, item):
-        return self.string
 
     def __len__(self):
         return len(self.string)
@@ -79,11 +77,11 @@ def compare_strings(str1, str2):
     if str1 == str2:
         return mistakes
     if len(str2) > len(str1):
-        lenght = len(str1)
+        length = len(str1)
     else:
-        lenght = len(str2)
+        length = len(str2)
 
-    for i in range(lenght):
+    for i in range(length):
         if str1[i] != str2[i]:
             mistakes.add(i)
     return mistakes
@@ -144,30 +142,24 @@ class SpeedTypingInternals:
             return 1
         new_mistakes = compare_strings(self.text.string, typed_text)
         self.count_typos(new_mistakes)
-        self.mistakes_indexes = [self.text.reformat_index(ind) for ind in new_mistakes]
+        self.mistakes_indexes = new_mistakes
+        #self.mistakes_indexes = {self.text.reformat_index(ind) for ind in new_mistakes}
         return 0
 
-    def set_typed_text(self, text):
-        self.typed_text = text
-
-    def set_timer_value(self, time):
-        self.timer_value = time
-
-    def game_controller(self):
-        while self.timer_value <= self.duration:
-            if self.speed_typing_check(self.typed_text) == 1:
-                break
-        return 1
+    def get_mistakes_indexes(self):
+        return self.mistakes_indexes
 
 
 class SpeedTypingInterface(th.Thread):
     def __init__(self, text=stringPlus("")):
         th.Thread.__init__(self)
         self.text_to_show = text
-        self.end_index = text.reformat_index(len(self.text_to_show))
         self.typed_text = ''
+        self.sample_end_index = None
+        self.input_end_index = text.reformat_index(len(self.typed_text))
         self.timer_value = 0
         self.started = 0
+        self.mistakes_indexes = set()
 
         self.window = None
         self.text_sample = None
@@ -192,16 +184,23 @@ class SpeedTypingInterface(th.Thread):
                 self.highlight_text(self.text_sample, 'mistake', index[0], index[0], index[1], index[1] + 1,
                                     bg_color='#FDCDC2', fg_color='red')
 
-    def highlight(self, end_index, mistakes):
+    def highlight(self):
+        mistakes_indexes = {self.text_to_show.reformat_index(ind) for ind in self.mistakes_indexes}
+        self.input_end_index = self.text_to_show.reformat_index(len(self.typed_text))
+        for tag in self.text_sample.tag_names():
+            self.text_sample.tag_delete(tag)
+        for tag in self.text_input.tag_names():
+            self.text_input.tag_delete(tag)
         try:
-            self.highlight_text(self.text_sample, "correct_input", 0, end_index[0], 0, end_index[1], fg_color='green')
-            self.highlight_mistakes(mistakes)
+            self.highlight_text(self.text_sample, "correct_input", 1, self.input_end_index[0], 0,
+                                self.input_end_index[1], fg_color='green')
+            self.highlight_mistakes(mistakes_indexes)
         except TypeError:
-            self.highlight_text(self.text_sample, "correct_input", 0, self.end_index[0], 0, self.end_index[1],
-                                fg_color='green')
-            self.highlight_overtype(self.text_input, 'overtype', self.end_index[0], self.end_index[1],
-                                    bg_color='#FDCDC2')
-            self.highlight_mistakes(mistakes)
+            self.highlight_text(self.text_sample, "correct_input", 1, self.sample_end_index[0], 0,
+                                self.sample_end_index[1], fg_color='green')
+            self.highlight_overtype(self.text_input, 'overtype', self.sample_end_index[0],
+                                    self.sample_end_index[1], bg_color='#FDCDC2')
+            self.highlight_mistakes(mistakes_indexes)
 
     def text_sample_config(self):
         self.text_sample.insert('0.0', self.text_to_show)
@@ -224,8 +223,10 @@ class SpeedTypingInterface(th.Thread):
     def set_time(self, time):
         self.timer_value = time
 
+    def set_mistake_indexes(self, indexes):
+        self.mistakes_indexes = indexes
+
     def interface(self):
-        #timer = Timer(10)
         self.window = tk.Tk()
         self.window.resizable(False, False)
 
@@ -240,8 +241,10 @@ class SpeedTypingInterface(th.Thread):
 
         while True:
             try:
-                self.started = self.__game_started()
-                self.typed_text = stringPlus(self.text_input.get('1.0', 'end-1c'))
+                if not self.started:
+                    self.started = self.__game_started()
+                self.typed_text = self.text_input.get('1.0', 'end-1c')
+                self.highlight()
                 self.timer_update(self.timer_value)
                 self.window.update()
             except tk.TclError:
@@ -257,13 +260,16 @@ class SpeedTypingManager:
         self.internals = SpeedTypingInternals(test_duration=duration)
         self.interface = SpeedTypingInterface(text=self.internals.text)
         self.interface.start()
-
+        print(self.internals.text)
         while self.interface.is_alive():
             if self.interface.started:
                 if not self.timer.started:
                     self.timer.start()
                 self.interface.set_time(self.timer.update())
-
+                typed_text = self.interface.typed_text
+                self.internals.speed_typing_check(typed_text)
+                print(self.internals.get_mistakes_indexes())
+                self.interface.set_mistake_indexes(self.internals.get_mistakes_indexes())
 
 
 class SpeedTypingInterface_old:
