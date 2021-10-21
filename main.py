@@ -138,7 +138,7 @@ class SpeedTypingInternals:
         self.typos += len(diff)
 
     def speed_typing_check(self, typed_text):
-        if self.text.string == typed_text:
+        if self.text.string == typed_text or self.timer_value == self.duration:
             return 1
         new_mistakes = compare_strings(self.text.string, typed_text)
         self.count_typos(new_mistakes)
@@ -149,17 +149,27 @@ class SpeedTypingInternals:
     def get_mistakes_indexes(self):
         return self.mistakes_indexes
 
+    def get_typos(self):
+        return self.typos
+
+    def set_time(self, time):
+        self.timer_value = time
+
 
 class SpeedTypingInterface(th.Thread):
-    def __init__(self, text=stringPlus("")):
+    def __init__(self, text=stringPlus(""), duration = 60):
         th.Thread.__init__(self)
         self.text_to_show = text
+        self.duration = duration
         self.typed_text = ''
-        self.sample_end_index = None
-        self.input_end_index = text.reformat_index(len(self.typed_text))
+        self.sample_end_index = text.reformat_index(len(self.text_to_show))
+        self.input_end_index = None
         self.timer_value = 0
         self.started = 0
         self.mistakes_indexes = set()
+        self.typos = 0
+
+        self.create_popup = 0
 
         self.window = None
         self.text_sample = None
@@ -186,7 +196,7 @@ class SpeedTypingInterface(th.Thread):
 
     def highlight(self):
         mistakes_indexes = {self.text_to_show.reformat_index(ind) for ind in self.mistakes_indexes}
-        self.input_end_index = self.text_to_show.reformat_index(len(self.typed_text))
+        self.input_end_index = self.text_to_show.reformat_index(len(self.typed_text) - self.typed_text.count('\n'))
         for tag in self.text_sample.tag_names():
             self.text_sample.tag_delete(tag)
         for tag in self.text_input.tag_names():
@@ -196,8 +206,8 @@ class SpeedTypingInterface(th.Thread):
                                 self.input_end_index[1], fg_color='green')
             self.highlight_mistakes(mistakes_indexes)
         except TypeError:
-            self.highlight_text(self.text_sample, "correct_input", 1, self.sample_end_index[0], 0,
-                                self.sample_end_index[1], fg_color='green')
+            self.highlight_text(self.text_sample, "correct_input", 0, self.sample_end_index[0], 0, self.sample_end_index[1],
+                                fg_color='green')
             self.highlight_overtype(self.text_input, 'overtype', self.sample_end_index[0],
                                     self.sample_end_index[1], bg_color='#FDCDC2')
             self.highlight_mistakes(mistakes_indexes)
@@ -212,6 +222,18 @@ class SpeedTypingInterface(th.Thread):
         self.text_input.grid(column=5, row=0, columnspan=5, padx=(0, 50), pady=50)
         self.text_input.focus()
 
+    def popup_window(self, speed, mistakes_number):
+        message = "Keyspeed is " + str(speed) + " KPM\nNumber of mistakes is " + str(mistakes_number) + "\nNumber of corrections is " + str(self.typos)
+        popup = tk.Toplevel()
+        popup.resizable(False, False)
+        label = tk.Label(popup, text=message).pack(padx=50, pady=50)
+
+        def func():
+            self.window.destroy()
+
+        tk.Button(popup, text="Close", command=func).pack()
+        popup.mainloop()
+
     def timer_update(self, current_time):
         self.timer['text'] = "{0:.0f}".format(current_time)
 
@@ -225,6 +247,9 @@ class SpeedTypingInterface(th.Thread):
 
     def set_mistake_indexes(self, indexes):
         self.mistakes_indexes = indexes
+
+    def set_typos_number(self, number):
+        self.typos = number
 
     def interface(self):
         self.window = tk.Tk()
@@ -243,6 +268,8 @@ class SpeedTypingInterface(th.Thread):
             try:
                 if not self.started:
                     self.started = self.__game_started()
+                if self.create_popup:
+                    self.popup_window(int(len(self.typed_text)*self.duration/self.timer_value), len(self.mistakes_indexes))
                 self.typed_text = self.text_input.get('1.0', 'end-1c')
                 self.highlight()
                 self.timer_update(self.timer_value)
@@ -255,20 +282,24 @@ class SpeedTypingInterface(th.Thread):
 
 
 class SpeedTypingManager:
-    def __init__(self, duration=10):
+    def __init__(self, duration=60):
         self.timer = Timer(duration)
-        self.internals = SpeedTypingInternals(test_duration=duration)
-        self.interface = SpeedTypingInterface(text=self.internals.text)
+        self.internals = SpeedTypingInternals(test_duration=duration, text_to_contest='text4')
+        self.interface = SpeedTypingInterface(text=self.internals.text, duration=duration)
         self.interface.start()
-        print(self.internals.text)
+
         while self.interface.is_alive():
             if self.interface.started:
                 if not self.timer.started:
                     self.timer.start()
                 self.interface.set_time(self.timer.update())
+                self.internals.set_time(self.timer.update())
                 typed_text = self.interface.typed_text
-                self.internals.speed_typing_check(typed_text)
-                print(self.internals.get_mistakes_indexes())
+                finish = self.internals.speed_typing_check(typed_text)
+                if finish:
+                    self.interface.set_typos_number(self.internals.get_typos())
+                    self.interface.create_popup = 1
+
                 self.interface.set_mistake_indexes(self.internals.get_mistakes_indexes())
 
 
@@ -450,13 +481,3 @@ class SpeedTypingManager_old:
 
 if __name__ == '__main__':
     s = SpeedTypingManager()
-    # s = SpeedTypingInterface(stringPlus('123'))
-    # s.start()
-    # timer = Timer(10)
-    #
-    # while True:
-    #     if s.started:
-    #         if not timer.started:
-    #             timer.start()
-    #         s.set_time(timer.update())
-    #     print(s.typed_text)
