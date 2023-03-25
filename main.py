@@ -4,9 +4,9 @@ from presenter import SpeedTypingManager
 from utils import AvailableTexts
 
 if __name__ == '__main__':
-    duration = 3
+    duration = 60
     text = AvailableTexts.text1
-    is_shell = False
+    is_shell = True
 
     internals = SpeedTypingInternals(test_duration=duration, text_to_contest=text.value)
     if is_shell:

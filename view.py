@@ -194,8 +194,6 @@ class SpeedTypingInterfaceCmd(SpeedTypingInterface):
                 self.typed_text += f'{key.char}'
             except Exception:
                 pass
-
-        print(self.typed_text)
         if self.finish_game:
             return False
 
@@ -211,7 +209,7 @@ class SpeedTypingInterfaceCmd(SpeedTypingInterface):
 
     def __interface(self):
         print(self.text_to_show)
-        print('\n wait till countdown')
+        print('\nwait till countdown')
 
         listener = keyboard.Listener(on_release=self.__on_release)
         self.__countdown()
@@ -222,6 +220,6 @@ class SpeedTypingInterfaceCmd(SpeedTypingInterface):
         while not self.finish_game:
             pass
 
-        print(f'keyspeed is {int(len(self.typed_text) * self.duration / self.timer_value)} KPM\ntypos nr: {self.typos}')
+        print(f'\nkeyspeed is {int(len(self.typed_text) * self.duration / self.timer_value)} KPM\ntypos nr: {self.typos}')
 
 
